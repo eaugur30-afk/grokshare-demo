@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#050505">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GrokShare">
+<title>GrokShare — Fractional Grok Access</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%233b82f6%22/><text x=%2216%22 y=%2222%22 text-anchor=%22middle%22 font-size=%2218%22 font-family=%22Inter,sans-serif%22 fill=%22white%22>G</text></svg>">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; background: #050505; color: #fff; }
+  .card { background: #0f0f0f; border: 1px solid #1a1a1a; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .card:hover { border-color: #3b82f6; transform: translateY(-3px); box-shadow: 0 12px 32px rgba(59, 130, 246, 0.12); }
+  .btn { transition: all 0.15s ease; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: scale(0.98); }
+  .modal { animation: fadeIn 0.15s ease; }
+  .modal-content { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .price-flash { animation: flash 0.25s ease; }
+  @keyframes flash { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .preset { transition: all 0.12s; }
+  .preset.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .discount-badge { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+  .hero-glow { background: radial-gradient(ellipse 60% 35% at 50% -5%, rgba(59,130,246,0.18), transparent); }
+  .input { background: #0a0a0a; border: 1px solid #2a2a2a; transition: border-color 0.15s; }
+  .input:focus { border-color: #3b82f6; outline: none; }
+  .step { transition: all 0.2s; }
+  .step.active { background: #2563eb; color: #fff; }
+  .step.done { background: #059669; color: #fff; }
+  .spinner { border: 2px solid #2a2a2a; border-top-color: #3b82f6; border-radius: 50%; width: 18px; height: 18px; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ticker { animation: ticker 35s linear infinite; }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .prod-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .demo-banner { background: #1a1508; border-bottom: 1px solid #3a3118; color: #e8c872; font-size: 12px; letter-spacing: 0.01em; }
+  #helpBubble { position: fixed; right: 20px; bottom: 20px; z-index: 45; }
+  #helpPanel { position: fixed; right: 20px; bottom: 84px; z-index: 45; width: 360px; max-width: calc(100vw - 24px); height: 500px; max-height: calc(100vh - 130px); display: none; }
+  #helpPanel.open { display: flex; }
+  #helpMessages { scrollbar-width: thin; scrollbar-color: #333 transparent; }
+  .help-msg { max-width: 88%; padding: 8px 11px; border-radius: 12px; font-size: 13px; line-height: 1.45; }
+  .help-msg.bot { background: #161616; border: 1px solid #262626; border-bottom-left-radius: 4px; }
+  .help-msg.user { background: #1d4ed8; margin-left: auto; border-bottom-right-radius: 4px; }
+  .help-chip { background: #111; border: 1px solid #2a2a2a; color: #d4d4d4; font-size: 11px; padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
+  .help-chip:hover { border-color: #3b82f6; color: #fff; }
+  @media (max-width: 640px) {
+    #helpPanel { right: 12px; left: 12px; width: auto; bottom: 80px; }
+    #helpBubble { right: 12px; bottom: 12px; }
+  }
+</style>
+</head>
+<body class="bg-black text-white antialiased">
+
+<div class="sticky top-0 z-40">
+  <div class="demo-banner text-center px-4 py-1.5 font-medium">Demo site — fake money, nothing is real</div>
+  <nav class="border-b border-zinc-900/70 px-6 py-3.5 flex items-center justify-between bg-black/75 backdrop-blur-lg">
+    <div class="flex items-center gap-2.5">
+      <div class="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md flex items-center justify-center text-xs font-bold">G</div>
+      <span class="font-semibold tracking-tight">GrokShare</span>
+    </div>
+    <div class="hidden md:flex gap-6 text-sm text-zinc-500">
+      <a href="#market" class="hover:text-white transition">Marketplace</a>
+      <a href="#earnings" class="hover:text-white transition">Earnings</a>
+      <a href="#prestige" class="hover:text-white transition">Prestige</a>
+      <a href="#holdings" class="hover:text-white transition">Holdings</a>
+      <a href="#activity" class="hover:text-white transition">Activity</a>
+    </div>
+    <div class="flex items-center gap-3">
+      <span id="navBalance" class="hidden text-sm font-medium text-zinc-300 tabular-nums"></span>
+      <button id="signInBtn" onclick="openAuth()" class="btn text-sm text-zinc-400 hover:text-white px-3 py-2">Sign in</button>
+      <button id="signOutBtn" onclick="signOut()" class="hidden btn text-sm text-zinc-500 hover:text-white px-2 py-2">Sign out</button>
+      <button onclick="openModal()" class="btn bg-blue-600 hover:bg-blue-500 text-sm font-medium px-4 py-2 rounded-lg">Buy share</button>
+    </div>
+  </nav>
+</div>
+
+<div class="bg-zinc-950/80 border-b border-zinc-900 overflow-hidden py-1.5">
+  <div class="ticker flex whitespace-nowrap text-xs text-zinc-600 gap-10">
+    <span>alex.k · 5% Super · $5.94</span><span>mia.r · 15% Bot listed</span><span>riley.m · 10% Cursor · $7.50</span>
+    <span>nova.s · 8% Builder listed</span><span>ava.c · 3% Ultra · $7.50</span><span>elena.v · 12% Imagine listed</span>
+    <span>jordan.t · 10% Super · $11.25</span><span>casey.l · 25% Bot listed</span>
+    <span>alex.k · 5% Super · $5.94</span><span>mia.r · 15% Bot listed</span><span>riley.m · 10% Cursor · $7.50</span>
+  </div>
+</div>
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 hero-glow"></div>
+  <div class="relative max-w-4xl mx-auto px-6 pt-24 pb-20 text-center">
+    <div class="inline-flex items-center gap-2 text-xs font-medium text-blue-400 bg-blue-950/40 border border-blue-900/40 px-3.5 py-1 rounded-full mb-6">
+      Fractional access · +25% markup · Demo
+    </div>
+    <h1 class="text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-5">Own slices of<br>Grok products</h1>
+    <p class="text-lg text-zinc-500 max-w-xl mx-auto mb-10">Super, Bots, Cursor, Builder, Imagine, Ultra. Exact percentages. Automatic bulk pricing. All of it is fake demo money.</p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <button onclick="document.getElementById('market').scrollIntoView({behavior:'smooth'})" class="btn bg-white text-black px-7 py-3.5 rounded-xl font-semibold text-sm hover:bg-zinc-200">Browse</button>
+      <button onclick="openModal()" class="btn border border-zinc-800 px-7 py-3.5 rounded-xl font-semibold text-sm hover:bg-zinc-900">Buy share</button>
+    </div>
+  </div>
+</section>
+
+<section class="border-y border-zinc-900 py-8">
+  <div class="max-w-4xl mx-auto px-6 grid grid-cols-3 gap-6 text-center">
+    <div><div class="text-2xl font-bold">6</div><div class="text-xs text-zinc-600 mt-1">Products</div></div>
+    <div><div class="text-2xl font-bold">15%</div><div class="text-xs text-zinc-600 mt-1">Max discount</div></div>
+    <div><div class="text-2xl font-bold" id="shareCount">1,284</div><div class="text-xs text-zinc-600 mt-1">Active shares</div></div>
+  </div>
+</section>
+
+<section id="market" class="py-20 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-end justify-between mb-8">
+      <div>
+        <h2 class="text-2xl font-bold">Marketplace</h2>
+        <p class="text-zinc-600 text-sm mt-0.5">Grouped by product. You pay with your demo balance.</p>
+      </div>
+    </div>
+    <div id="listings"></div>
+  </div>
+</section>
+
+<section id="earnings" class="py-20 px-6 border-t border-zinc-900">
+  <div class="max-w-3xl mx-auto">
+    <h2 class="text-2xl font-bold mb-2">Earnings</h2>
+    <p class="text-zinc-600 text-sm mb-6">Each product earns differently, based on the percent you own. Super mines BTC. Others make their own kind of revenue. This is all simulated.</p>
+    <div id="earningsPanel">
+      <div class="card rounded-2xl p-8 text-center text-zinc-600 text-sm">Sign in and buy a share to start earning.</div>
+    </div>
+  </div>
+</section>
+
+<section id="prestige" class="py-20 px-6 border-t border-zinc-900">
+  <div class="max-w-2xl mx-auto">
+    <h2 class="text-2xl font-bold mb-2">Prestige</h2>
+    <p class="text-zinc-600 text-sm mb-6">Level up to claim extra demo credits. Looks like a real balance. It is not real money.</p>
+    <div id="prestigePanel">
+      <div class="card rounded-2xl p-8 text-center text-zinc-600 text-sm">Sign in to view prestige and earn.</div>
+    </div>
+  </div>
+</section>
+
+<section id="holdings" class="py-20 px-6 border-t border-zinc-900">
+  <div class="max-w-2xl mx-auto">
+    <h2 class="text-2xl font-bold mb-6">Holdings</h2>
+    <div id="holdingsList">
+      <div class="card rounded-2xl p-10 text-center text-zinc-600 text-sm">No shares yet.</div>
+    </div>
+  </div>
+</section>
+
+<section id="activity" class="py-20 px-6 border-t border-zinc-900">
+  <div class="max-w-2xl mx-auto">
+    <h2 class="text-2xl font-bold mb-6">Activity</h2>
+    <div id="activityList">
+      <div class="card rounded-xl p-6 text-center text-zinc-600 text-sm">No activity yet.</div>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t border-zinc-900 py-8 px-6 text-center text-xs text-zinc-700 pb-24">
+  GrokShare is a fictional demo. Not affiliated with xAI, Grok, or Cursor. No real payments. Nothing is sent to PayPal. Prices are based on public rates + 25% markup. Bulk discounts reduce the buyer price only.
+</footer>
+
+<button id="helpBubble" type="button" onclick="toggleHelp()" class="btn w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/30 flex items-center justify-center" aria-label="Open GrokShare Helper">
+  <span id="helpBubbleLabel" class="text-sm font-semibold">Help</span>
+</button>
+<div id="helpPanel" class="card rounded-2xl flex-col overflow-hidden shadow-2xl">
+  <div class="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-[#0a0a0a]">
+    <div>
+      <div class="font-semibold text-sm">GrokShare Helper</div>
+      <div class="text-[11px] text-zinc-500">Demo helper · answers stay on this device</div>
+    </div>
+    <button type="button" onclick="toggleHelp(false)" class="text-zinc-500 hover:text-white text-xl leading-none px-1">&times;</button>
+  </div>
+  <div id="helpMessages" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+  <div id="helpChips" class="px-3 pb-2 flex gap-1.5 overflow-x-auto"></div>
+  <form onsubmit="sendHelp(event)" class="border-t border-zinc-800 p-3 flex gap-2">
+    <input id="helpInput" type="text" autocomplete="off" placeholder="Ask a question…" class="input flex-1 px-3 py-2 rounded-lg text-sm">
+    <button type="submit" class="btn bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg text-sm font-medium">Send</button>
+  </form>
+</div>
+
+<div id="authModal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50 modal">
+  <div class="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full modal-content">
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="font-semibold">Sign in</h3>
+      <button onclick="closeAuth()" class="text-zinc-600 hover:text-white text-xl leading-none">&times;</button>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs text-zinc-600 uppercase tracking-wider">Email</label>
+        <input id="authEmail" type="email" placeholder="you@email.com" class="input w-full mt-1 px-3.5 py-2.5 rounded-lg text-sm" value="demo@grokshare.io">
+      </div>
+      <div>
+        <label class="text-xs text-zinc-600 uppercase tracking-wider">Display name <span class="normal-case tracking-normal">(optional)</span></label>
+        <input id="authName" type="text" placeholder="Alex" class="input w-full mt-1 px-3.5 py-2.5 rounded-lg text-sm">
+      </div>
+    </div>
+    <p id="authError" class="hidden text-xs text-red-400 mt-3"></p>
+    <button onclick="doSignIn()" class="btn w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-semibold mt-5">Continue</button>
+    <p class="text-[11px] text-zinc-700 text-center mt-3">Demo login. Email only — no password. Progress is saved on this device. Switching emails loads that email's own save.</p>
+  </div>
+</div>
+
+<div id="paypalModal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50 modal">
+  <div class="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold">Cash out to PayPal (demo)</h3>
+      <button onclick="closePaypal()" class="text-zinc-600 hover:text-white text-xl leading-none">&times;</button>
+    </div>
+    <p class="text-xs text-amber-200/80 bg-amber-950/40 border border-amber-900/40 rounded-lg px-3 py-2 mb-4">This is a simulated cash out. Nothing is sent. Not real money. Not real PayPal.</p>
+    <div id="paypalForm">
+      <div class="flex justify-between items-end mb-4">
+        <div>
+          <div class="text-xs text-zinc-500 uppercase tracking-wider">Amount</div>
+          <div id="paypalAmount" class="text-2xl font-bold mt-0.5">$0.00</div>
+        </div>
+        <div class="text-xs text-zinc-600">Min cash out is $25.00</div>
+      </div>
+      <label class="text-xs text-zinc-600 uppercase tracking-wider">PayPal email (demo)</label>
+      <input id="paypalEmail" type="email" placeholder="you@email.com" class="input w-full mt-1 px-3.5 py-2.5 rounded-lg text-sm mb-2">
+      <p id="paypalFormError" class="hidden text-xs text-red-400 mb-2"></p>
+      <div class="flex gap-2 mt-2">
+        <button onclick="closePaypal()" class="btn flex-1 border border-zinc-800 py-2.5 rounded-lg text-sm">Cancel</button>
+        <button id="paypalConfirmBtn" onclick="confirmRedeem()" class="btn flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-semibold">Confirm cash out</button>
+      </div>
+    </div>
+    <div id="paypalProgress" class="hidden text-center">
+      <div class="text-sm text-zinc-300 mb-1">Fake transaction ID</div>
+      <div id="paypalTx" class="font-mono text-sm mb-3">DEMO-PP-0000</div>
+      <div id="paypalStatus" class="text-sm text-zinc-400 mb-4">Pending (demo)</div>
+      <div id="paypalSpinner" class="spinner mx-auto mb-4"></div>
+      <button id="paypalDone" onclick="closePaypal()" class="hidden btn w-full bg-zinc-800 hover:bg-zinc-700 py-3 rounded-lg text-sm">Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50 modal">
+  <div class="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 max-w-md w-full modal-content max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="font-semibold">Checkout</h3>
+      <button onclick="closeModal()" class="text-zinc-600 hover:text-white text-xl leading-none">&times;</button>
+    </div>
+    <div class="flex gap-1.5 mb-5 text-xs">
+      <div id="step1" class="step active flex-1 text-center py-1 rounded-full bg-zinc-800">1. Amount</div>
+      <div id="step2" class="step flex-1 text-center py-1 rounded-full bg-zinc-800">2. Details</div>
+      <div id="step3" class="step flex-1 text-center py-1 rounded-full bg-zinc-800">3. Confirm</div>
+    </div>
+
+    <div id="panel1">
+      <div class="mb-4">
+        <label class="text-xs text-zinc-600 uppercase tracking-wider">Product</label>
+        <select id="productSelect" onchange="switchProduct(this.value)" class="input w-full mt-1.5 px-3.5 py-2.5 rounded-lg text-sm">
+          <option value="super">Grok Super · $100/mo</option>
+          <option value="bot">Grok Bot · $40/mo</option>
+          <option value="cursor">Cursor Access · $60/mo</option>
+          <option value="builder">Builder Mode · $30/mo</option>
+          <option value="imagine">Imagine · $25/mo</option>
+          <option value="ultra">Grok Ultra · $200/mo</option>
+        </select>
+      </div>
+      <div class="flex gap-1.5 mb-4">
+        <button onclick="setPct(3)" class="preset flex-1 py-1.5 text-xs rounded-lg border border-zinc-800" data-p="3">3%</button>
+        <button onclick="setPct(5)" class="preset flex-1 py-1.5 text-xs rounded-lg border border-zinc-800" data-p="5">5%</button>
+        <button onclick="setPct(10)" class="preset flex-1 py-1.5 text-xs rounded-lg border border-zinc-800" data-p="10">10%</button>
+        <button onclick="setPct(25)" class="preset flex-1 py-1.5 text-xs rounded-lg border border-zinc-800" data-p="25">25%</button>
+      </div>
+      <label class="text-xs text-zinc-600 uppercase tracking-wider">Percentage</label>
+      <input type="range" id="pct" min="1" max="50" value="10" class="w-full mt-2 accent-blue-500" oninput="updatePrice()">
+      <div class="flex justify-between text-xs text-zinc-600 mt-1">
+        <span>1%</span><span id="pctLabel" class="text-white font-semibold">10%</span><span>50%</span>
+      </div>
+      <div class="bg-zinc-900/60 rounded-xl p-4 mt-4 space-y-1.5 text-sm">
+        <div class="flex justify-between"><span class="text-zinc-500">Base</span><span id="basePrice">$10.00</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Markup</span><span id="markupPrice">+$2.50</span></div>
+        <div class="flex justify-between text-emerald-400"><span>Discount</span><span id="discount">—</span></div>
+        <div class="border-t border-zinc-800 pt-2 flex justify-between items-center">
+          <span>Total</span><span id="finalPrice" class="text-lg font-bold">$11.25</span>
+        </div>
+      </div>
+      <button onclick="goToStep(2)" class="btn w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-sm font-semibold mt-4">Continue</button>
+    </div>
+
+    <div id="panel2" class="hidden">
+      <div class="bg-zinc-900/60 rounded-xl p-4 space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-zinc-500">Signed in as</span><span id="payEmail" class="font-mono text-xs">—</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Demo balance</span><span id="payBalance" class="font-medium">$0.00</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">This share</span><span id="payCost" class="font-medium">$0.00</span></div>
+      </div>
+      <p id="payWarn" class="hidden text-xs text-red-400 mb-3"></p>
+      <p class="text-xs text-zinc-600 mb-4">Paid from your GrokShare demo balance. No card or payment details are asked for. No real charge.</p>
+      <div class="flex gap-2 mt-4">
+        <button onclick="goToStep(1)" class="btn flex-1 border border-zinc-800 py-2.5 rounded-lg text-sm">Back</button>
+        <button id="reviewBtn" onclick="goToStep(3)" class="btn flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-semibold">Review</button>
+      </div>
+    </div>
+
+    <div id="panel3" class="hidden">
+      <div class="bg-zinc-900/60 rounded-xl p-4 space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-zinc-500">Share</span><span id="confirmPct" class="font-medium">10%</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Email</span><span id="confirmEmail" class="font-mono text-xs">demo@grokshare.io</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Pay with</span><span class="text-xs">Demo balance</span></div>
+        <div class="border-t border-zinc-800 pt-2 flex justify-between items-center">
+          <span>Total</span><span id="confirmTotal" class="text-lg font-bold">$11.25</span>
+        </div>
+      </div>
+      <div id="processing" class="hidden text-center py-5">
+        <div class="spinner mx-auto mb-2"></div>
+        <div id="processMsg" class="text-sm text-zinc-500">Checking your demo balance...</div>
+      </div>
+      <div id="confirmBtns" class="flex gap-2">
+        <button onclick="goToStep(2)" class="btn flex-1 border border-zinc-800 py-2.5 rounded-lg text-sm">Back</button>
+        <button onclick="processPayment()" class="btn flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-semibold">Buy with demo balance</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="success" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50 modal">
+  <div class="bg-zinc-950 border border-zinc-800 rounded-2xl p-7 max-w-sm w-full text-center modal-content">
+    <div class="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">✓</div>
+    <h3 class="font-semibold mb-1">Purchased</h3>
+    <p class="text-zinc-500 text-xs mb-1">Order <span id="orderId" class="font-mono">GS-0000</span></p>
+    <p class="text-zinc-600 text-xs mb-4"><span id="bought">10</span>% <span id="boughtProduct">Grok Super</span> is now in your holdings.</p>
+    <p class="text-[11px] text-zinc-700 mb-5">Paid with your demo balance. Not a real purchase.</p>
+    <button onclick="closeSuccess()" class="btn w-full bg-zinc-800 hover:bg-zinc-700 py-3 rounded-lg text-sm">Done</button>
+  </div>
+</div>
+
+<script>
+
+const MARKUP = 0.25;
+const DISCOUNTS = [{ min: 20, off: 0.15 }, { min: 10, off: 0.10 }, { min: 5, off: 0.05 }];
+const START_BALANCE = 5.00;
+const MIN_REDEEM = 25;
+const REDEEM_DELAY_MS = 3500;
+const CLAIM_COOLDOWN_MS = 8000;
+const BTC_PRICE = 97240;
+const colors = { blue: '#3b82f6', emerald: '#10b981', violet: '#8b5cf6', amber: '#f59e0b', pink: '#ec4899', red: '#ef4444' };
+const products = [
+  { id: "super", name: "Grok Super", base: 100, desc: "15x usage · priority · full access", color: "blue" },
+  { id: "bot", name: "Grok Bot", base: 40, desc: "Agents & routines", color: "emerald" },
+  { id: "cursor", name: "Cursor Access", base: 60, desc: "Coding agents & cloud", color: "violet" },
+  { id: "builder", name: "Builder Mode", base: 30, desc: "App generation", color: "amber" },
+  { id: "imagine", name: "Imagine", base: 25, desc: "Image & video", color: "pink" },
+  { id: "ultra", name: "Grok Ultra", base: 200, desc: "50x · earliest access", color: "red" },
+];
+const listings = [
+  { product: "super", pct: 5, seller: "alex.k", rating: 4.9, left: 4 },
+  { product: "super", pct: 10, seller: "jordan.t", rating: 5.0, left: 2 },
+  { product: "bot", pct: 15, seller: "mia.r", rating: 4.8, left: 6 },
+  { product: "bot", pct: 25, seller: "casey.l", rating: 4.9, left: 3 },
+  { product: "cursor", pct: 10, seller: "riley.m", rating: 4.9, left: 5 },
+  { product: "cursor", pct: 20, seller: "sam.p", rating: 4.7, left: 1 },
+  { product: "builder", pct: 8, seller: "nova.s", rating: 5.0, left: 7 },
+  { product: "builder", pct: 30, seller: "leo.p", rating: 4.6, left: 2 },
+  { product: "imagine", pct: 12, seller: "elena.v", rating: 4.8, left: 4 },
+  { product: "imagine", pct: 40, seller: "zara.t", rating: 4.7, left: 3 },
+  { product: "ultra", pct: 3, seller: "ava.c", rating: 5.0, left: 5 },
+  { product: "ultra", pct: 15, seller: "isla.d", rating: 4.9, left: 1 },
+];
+const earnMeta = {
+  super:   { key: 'btc',     label: 'BTC Mining',    source: 'Super',    rate: 0.000012, unit: 'btc' },
+  cursor:  { key: 'cursor',  label: 'Code Bounties', source: 'Cursor',   rate: 0.08,     unit: 'usd' },
+  bot:     { key: 'bot',     label: 'Agent Fees',    source: 'Grok Bot', rate: 0.05,     unit: 'usd' },
+  builder: { key: 'builder', label: 'App Revenue',   source: 'Builder',  rate: 0.04,     unit: 'usd' },
+  imagine: { key: 'imagine', label: 'Content Sales', source: 'Imagine',  rate: 0.03,     unit: 'usd' },
+  ultra:   { key: 'ultra',   label: 'Alpha Yield',   source: 'Ultra',    rate: 0.15,     unit: 'usd' },
+};
+const prestigeTiers = [
+  { level: 1, name: "Starter", earn: 0.50 },
+  { level: 2, name: "Active", earn: 1.25 },
+  { level: 3, name: "Trusted", earn: 2.50 },
+  { level: 4, name: "Elite", earn: 5.00 },
+  { level: 5, name: "Legendary", earn: 10.00 },
+];
+const HELP_CHIPS = [
+  "How do I earn?",
+  "What's my balance?",
+  "How do I buy a share?",
+  "How do I sell?",
+  "How does cash out work?",
+  "How does each product earn?",
+  "What's my level?",
+];
+
+let currentProduct = "super";
+let holdings = [];
+let activity = [];
+let chat = [];
+let orderNum = 1847;
+let user = null;
+let prestige = { level: 1, xp: 0, balance: 0, nextClaim: 0 };
+let earnings = { btc: 0, cursor: 0, bot: 0, builder: 0, imagine: 0, ultra: 0, lastTick: 0 };
+let pendingBuy = null;
+let redeemTimers = [];
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function money(n) { return '$' + (Number(n) || 0).toFixed(2); }
+function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || '').trim()); }
+function storageKey(email) { return 'grokshare_' + String(email).toLowerCase().trim(); }
+function defaultEarnings() { return { btc: 0, cursor: 0, bot: 0, builder: 0, imagine: 0, ultra: 0, lastTick: Date.now() }; }
+
+function openAuth() {
+  document.getElementById('authError').classList.add('hidden');
+  document.getElementById('authModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('authEmail').focus(), 50);
+}
+function closeAuth() { document.getElementById('authModal').classList.add('hidden'); }
+
+function save() {
+  if (!user) return;
+  const data = { user, holdings, activity, orderNum, prestige, earnings, chat };
+  localStorage.setItem(storageKey(user.email), JSON.stringify(data));
+  localStorage.setItem('grokshare_last', user.email);
+}
+
+function load(email) {
+  const raw = localStorage.getItem(storageKey(email));
+  if (!raw) return false;
+  try {
+    const data = JSON.parse(raw);
+    user = data.user;
+    if (user && user.email) user.email = user.email.toLowerCase().trim();
+    holdings = data.holdings || [];
+    activity = data.activity || [];
+    orderNum = data.orderNum || 1847;
+    prestige = data.prestige || { level: 1, xp: 0, balance: 0, nextClaim: 0 };
+    if (typeof prestige.balance !== 'number') prestige.balance = 0;
+    earnings = Object.assign(defaultEarnings(), data.earnings || {});
+    chat = Array.isArray(data.chat) ? data.chat : [];
+    return true;
+  } catch (e) { return false; }
+}
+
+function applyUser() {
+  if (!user) return;
+  const btn = document.getElementById('signInBtn');
+  btn.textContent = user.name || user.email.split('@')[0];
+  btn.onclick = () => document.getElementById('prestige').scrollIntoView({behavior:'smooth'});
+  document.getElementById('signOutBtn').classList.remove('hidden');
+  document.getElementById('navBalance').classList.remove('hidden');
+  resolveRedemptions();
+  tickEarnings(true);
+  renderPrestige();
+  renderHoldings();
+  renderActivity();
+  renderEarnings();
+  updateNavBalance();
+  document.getElementById('shareCount').textContent = (1284 + holdings.length).toLocaleString();
+  renderHelp();
+}
+
+function updateNavBalance() {
+  const el = document.getElementById('navBalance');
+  if (!user) { el.classList.add('hidden'); el.textContent = ''; return; }
+  el.classList.remove('hidden');
+  el.textContent = money(prestige.balance);
+}
+
+function doSignIn() {
+  const email = (document.getElementById('authEmail').value || '').toLowerCase().trim();
+  const nameInput = (document.getElementById('authName').value || '').trim();
+  const err = document.getElementById('authError');
+  if (!isEmail(email)) {
+    err.textContent = 'Please enter a valid email. No password is needed.';
+    err.classList.remove('hidden');
+    return;
+  }
+  if (load(email)) {
+    if (nameInput) { user.name = nameInput; save(); }
+    closeAuth();
+    applyUser();
+    maybeResumeBuy();
+    return;
+  }
+  user = { email, name: nameInput || email.split('@')[0] };
+  prestige = { level: 1, xp: 0, balance: START_BALANCE, nextClaim: 0 };
+  holdings = [];
+  activity = [];
+  chat = [];
+  orderNum = 1847;
+  earnings = defaultEarnings();
+  closeAuth();
+  save();
+  applyUser();
+  maybeResumeBuy();
+}
+
+function maybeResumeBuy() {
+  if (!pendingBuy) return;
+  const pb = pendingBuy;
+  pendingBuy = null;
+  openModal(pb.p, pb.productId);
+}
+
+function signOut() {
+  localStorage.removeItem('grokshare_last');
+  user = null;
+  holdings = [];
+  activity = [];
+  chat = [];
+  prestige = { level: 1, xp: 0, balance: 0, nextClaim: 0 };
+  earnings = defaultEarnings();
+  const btn = document.getElementById('signInBtn');
+  btn.textContent = 'Sign in';
+  btn.onclick = openAuth;
+  document.getElementById('signOutBtn').classList.add('hidden');
+  updateNavBalance();
+  renderPrestige();
+  renderHoldings();
+  renderActivity();
+  renderEarnings();
+  renderHelp();
+  document.getElementById('shareCount').textContent = '1,284';
+}
+
+function getTier() { return prestigeTiers.find(t => t.level === prestige.level) || prestigeTiers[0]; }
+function claimMsLeft() { return Math.max(0, (prestige.nextClaim || 0) - Date.now()); }
+
+function claimPrestige() {
+  if (!user) { openAuth(); return; }
+  if (claimMsLeft() > 0) return;
+  const tier = getTier();
+  const amount = tier.earn + Math.random() * 0.5;
+  prestige.balance += amount;
+  prestige.xp += 40;
+  if (prestige.xp >= prestige.level * 200 && prestige.level < 5) {
+    prestige.level++;
+    prestige.xp = 0;
+  }
+  prestige.nextClaim = Date.now() + CLAIM_COOLDOWN_MS;
+  activity.unshift({
+    type: 'claim',
+    pct: 0,
+    product: 'Prestige claim',
+    price: amount,
+    email: user.email,
+    order: 'PC-' + Date.now().toString().slice(-4)
+  });
+  save();
+  renderPrestige();
+  renderActivity();
+  updateNavBalance();
+}
+
+function renderPrestige() {
+  const el = document.getElementById('prestigePanel');
+  if (!user) {
+    el.innerHTML = '<div class="card rounded-2xl p-8 text-center text-zinc-600 text-sm">Sign in to view prestige and earn.</div>';
+    return;
+  }
+  const tier = getTier();
+  const next = prestigeTiers.find(t => t.level === prestige.level + 1);
+  const xpNeeded = prestige.level * 200;
+  const pct = Math.min(100, (prestige.xp / xpNeeded) * 100);
+  const left = claimMsLeft();
+  const canClaim = left <= 0;
+  const avail = availableCash();
+  el.innerHTML = `
+    <div class="card rounded-2xl p-6">
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <div class="text-xs text-zinc-500 uppercase tracking-wider">Balance</div>
+          <div class="text-3xl font-bold mt-1">${money(prestige.balance)}</div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs text-zinc-500">Prestige</div>
+          <div class="text-lg font-semibold text-amber-400">${esc(tier.name)}</div>
+          <div class="text-xs text-zinc-600">Level ${prestige.level}</div>
+        </div>
+      </div>
+      <div class="mb-4">
+        <div class="flex justify-between text-xs text-zinc-600 mb-1">
+          <span>XP ${prestige.xp}/${xpNeeded}</span>
+          ${next ? `<span>Next: ${esc(next.name)}</span>` : '<span>Max</span>'}
+        </div>
+        <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+          <div class="h-full bg-amber-500 rounded-full" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <button onclick="claimPrestige()" class="btn w-full ${canClaim ? 'bg-amber-500 hover:bg-amber-400 text-black' : 'bg-zinc-800 text-zinc-500'} py-3 rounded-xl text-sm font-semibold">
+        ${canClaim ? `Claim ${money(tier.earn)}+` : ('Claim in ' + Math.ceil(left/1000) + 's')}
+      </button>
+      <button onclick="openRedeem()" class="btn w-full border border-zinc-800 py-2.5 rounded-xl text-sm font-medium mt-2 ${avail < MIN_REDEEM ? 'opacity-50' : ''}">Cash out to PayPal (demo)</button>
+      <p class="text-[11px] text-zinc-700 text-center mt-3">Demo money only. Cash out is simulated and needs at least ${money(MIN_REDEEM)}. Nothing is sent.</p>
+    </div>
+  `;
+}
+
+function streamUsd(key, value) {
+  if (key === 'btc') return value * BTC_PRICE;
+  return value;
+}
+function earningsUsd() {
+  return streamUsd('btc', earnings.btc) + earnings.cursor + earnings.bot + earnings.builder + earnings.imagine + earnings.ultra;
+}
+function availableCash() { return (user ? prestige.balance : 0) + earningsUsd(); }
+
+function streamList() {
+  return [
+    { key: 'btc',     label: 'BTC Mining',    source: 'Super',    value: earnings.btc,     usd: streamUsd('btc', earnings.btc) },
+    { key: 'cursor',  label: 'Code Bounties', source: 'Cursor',   value: earnings.cursor,  usd: earnings.cursor },
+    { key: 'bot',     label: 'Agent Fees',    source: 'Grok Bot', value: earnings.bot,     usd: earnings.bot },
+    { key: 'builder', label: 'App Revenue',   source: 'Builder',  value: earnings.builder, usd: earnings.builder },
+    { key: 'imagine', label: 'Content Sales', source: 'Imagine',  value: earnings.imagine, usd: earnings.imagine },
+    { key: 'ultra',   label: 'Alpha Yield',   source: 'Ultra',    value: earnings.ultra,   usd: earnings.ultra },
+  ];
+}
+
+function tickEarnings(force) {
+  if (!user) { if (force) renderEarnings(); return; }
+  const now = Date.now();
+  const elapsed = Math.max(0, Math.min(60 * 60 * 24, (now - (earnings.lastTick || now)) / 1000));
+  earnings.lastTick = now;
+  holdings.forEach(h => {
+    const meta = earnMeta[h.product];
+    if (!meta) return;
+    const amount = meta.rate * (h.pct / 10) * elapsed;
+    earnings[meta.key] = (earnings[meta.key] || 0) + amount;
+  });
+  if (force || Math.random() < 0.05) save();
+  renderEarnings();
+}
+
+function collectEarnings() {
+  if (!user) return;
+  const streams = streamList().filter(s => s.usd >= 0.0001);
+  if (!streams.length) return;
+  let total = 0;
+  streams.forEach(s => {
+    total += s.usd;
+    activity.unshift({
+      type: 'earn',
+      pct: 0,
+      product: s.label + ' (' + s.source + ')',
+      price: s.usd,
+      email: user.email,
+      order: 'ER-' + Date.now().toString().slice(-4) + s.key.slice(0, 2)
+    });
+  });
+  prestige.balance += total;
+  earnings.btc = 0; earnings.cursor = 0; earnings.bot = 0;
+  earnings.builder = 0; earnings.imagine = 0; earnings.ultra = 0;
+  save();
+  renderEarnings();
+  renderPrestige();
+  renderActivity();
+  updateNavBalance();
+}
+
+function openRedeem() {
+  if (!user) { openAuth(); return; }
+  const total = availableCash();
+  document.getElementById('paypalAmount').textContent = money(total);
+  document.getElementById('paypalForm').classList.remove('hidden');
+  document.getElementById('paypalProgress').classList.add('hidden');
+  document.getElementById('paypalFormError').classList.add('hidden');
+  document.getElementById('paypalEmail').value = user.email || '';
+  const btn = document.getElementById('paypalConfirmBtn');
+  if (total < MIN_REDEEM) {
+    btn.disabled = true;
+    btn.classList.add('opacity-50', 'pointer-events-none');
+    const err = document.getElementById('paypalFormError');
+    err.textContent = 'You need at least ' + money(MIN_REDEEM) + ' in balance plus uncollected earnings to cash out. This is a demo rule.';
+    err.classList.remove('hidden');
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('opacity-50', 'pointer-events-none');
+  }
+  document.getElementById('paypalModal').classList.remove('hidden');
+}
+
+function confirmRedeem() {
+  if (!user) return;
+  const total = availableCash();
+  const email = (document.getElementById('paypalEmail').value || '').toLowerCase().trim();
+  const err = document.getElementById('paypalFormError');
+  if (total < MIN_REDEEM) {
+    err.textContent = 'You need at least ' + money(MIN_REDEEM) + ' to cash out.';
+    err.classList.remove('hidden');
+    return;
+  }
+  if (!isEmail(email)) {
+    err.textContent = 'Enter a demo PayPal email. Nothing will be sent.';
+    err.classList.remove('hidden');
+    return;
+  }
+  const txId = 'DEMO-PP-' + Math.random().toString(36).slice(2, 10).toUpperCase();
+  const completeAt = Date.now() + REDEEM_DELAY_MS;
+  const earn = earningsUsd();
+  const fromEarn = Math.min(earn, total);
+  const fromBal = total - fromEarn;
+  earnings.btc = 0; earnings.cursor = 0; earnings.bot = 0;
+  earnings.builder = 0; earnings.imagine = 0; earnings.ultra = 0;
+  prestige.balance = Math.max(0, prestige.balance - fromBal);
+  activity.unshift({
+    type: 'redeem',
+    pct: 0,
+    product: 'Cash out to PayPal (demo)',
+    price: total,
+    email,
+    order: txId,
+    status: 'pending',
+    completeAt,
+    note: 'Simulated · nothing was sent'
+  });
+  save();
+  renderEarnings();
+  renderPrestige();
+  renderActivity();
+  updateNavBalance();
+
+  document.getElementById('paypalForm').classList.add('hidden');
+  document.getElementById('paypalProgress').classList.remove('hidden');
+  document.getElementById('paypalTx').textContent = txId;
+  document.getElementById('paypalStatus').textContent = 'Pending (demo) · nothing is being sent';
+  document.getElementById('paypalSpinner').classList.remove('hidden');
+  document.getElementById('paypalDone').classList.add('hidden');
+  scheduleRedeemComplete(txId, completeAt);
+}
+
+function scheduleRedeemComplete(orderId, completeAt) {
+  const delay = Math.max(0, completeAt - Date.now());
+  const t = setTimeout(() => {
+    const item = activity.find(a => a.order === orderId && a.status === 'pending');
+    if (item) {
+      item.status = 'completed';
+      save();
+      renderActivity();
+    }
+    const txEl = document.getElementById('paypalTx');
+    if (txEl && txEl.textContent === orderId) {
+      document.getElementById('paypalStatus').textContent = 'Completed (demo) · nothing was sent';
+      document.getElementById('paypalSpinner').classList.add('hidden');
+      document.getElementById('paypalDone').classList.remove('hidden');
+    }
+  }, delay);
+  redeemTimers.push(t);
+}
+
+function resolveRedemptions() {
+  (activity || []).forEach(a => {
+    if (a.type === 'redeem' && a.status === 'pending') {
+      if (!a.completeAt || Date.now() >= a.completeAt) {
+        a.status = 'completed';
+      } else {
+        scheduleRedeemComplete(a.order, a.completeAt);
+      }
+    }
+  });
+}
+
+function closePaypal() { document.getElementById('paypalModal').classList.add('hidden'); }
+
+function renderEarnings() {
+  const el = document.getElementById('earningsPanel');
+  if (!user) {
+    el.innerHTML = '<div class="card rounded-2xl p-8 text-center text-zinc-600 text-sm">Sign in and buy a share to start earning.</div>';
+    return;
+  }
+  if (!holdings.length) {
+    el.innerHTML = '<div class="card rounded-2xl p-8 text-center text-zinc-600 text-sm">Buy a share to start earning.<br><button onclick="document.getElementById(\'market\').scrollIntoView({behavior:\'smooth\'})" class="btn bg-blue-600 hover:bg-blue-500 text-sm font-medium px-5 py-2.5 rounded-lg mt-4">Browse shares</button></div>';
+    return;
+  }
+  const streams = streamList();
+  const active = streams.filter(s => holdings.some(h => (s.key === 'btc' && h.product === 'super') || h.product === s.key));
+  const totalUsd = streams.reduce((s, x) => s + x.usd, 0);
+  const avail = availableCash();
+  el.innerHTML = `
+    <div class="card rounded-xl p-4 mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div>
+        <div class="text-xs text-zinc-500 uppercase tracking-wider">Uncollected earnings</div>
+        <div class="text-2xl font-bold">${money(totalUsd)}</div>
+        <div class="text-xs text-zinc-600 mt-1">Wallet ${money(prestige.balance)} · Cash-out total ${money(avail)}</div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <button onclick="collectEarnings()" class="btn border border-zinc-700 px-5 py-2.5 rounded-lg text-sm font-semibold ${totalUsd < 0.0001 ? 'opacity-50 pointer-events-none' : ''}">Collect to balance</button>
+        <button onclick="openRedeem()" class="btn bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-lg text-sm font-semibold ${avail < MIN_REDEEM ? 'opacity-50' : ''}">Cash out to PayPal (demo)</button>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4">
+      ${active.map(s => `
+        <div class="card rounded-xl p-5">
+          <div class="text-xs text-zinc-500 uppercase tracking-wider">${esc(s.label)}</div>
+          <div class="text-2xl font-bold mt-1">${s.key === 'btc' ? s.value.toFixed(8) + ' BTC' : money(s.value)}</div>
+          <div class="text-xs text-zinc-600 mt-1">≈ ${money(s.usd)} · from ${esc(s.source)} · grows with the % you own</div>
+        </div>
+      `).join('')}
+    </div>
+    <button onclick="document.getElementById('market').scrollIntoView({behavior:'smooth'})" class="btn w-full border border-zinc-800 py-2.5 rounded-lg text-sm mt-4">Buy more</button>
+    <p class="text-[11px] text-zinc-700 text-center mt-3">Collect moves demo earnings into your balance (each stream is named in Activity). Cash out is a simulated PayPal transfer. Min ${money(MIN_REDEEM)}. Nothing is sent.</p>
+  `;
+}
+
+function switchProduct(id) { currentProduct = id; updatePrice(); }
+function getProduct(id) { return products.find(p => p.id === id) || products[0]; }
+function getDiscount(pct) { for (const d of DISCOUNTS) if (pct >= d.min) return d.off; return 0; }
+function calc(pct, productId) {
+  const prod = getProduct(productId || currentProduct);
+  const base = (pct / 100) * prod.base;
+  const markup = base * MARKUP;
+  const pre = base + markup;
+  const off = getDiscount(pct);
+  return { base, markup, off, final: pre * (1 - off), prod };
+}
+
+function renderListings() {
+  const grouped = {};
+  listings.forEach(l => { if (!grouped[l.product]) grouped[l.product] = []; grouped[l.product].push(l); });
+  document.getElementById('listings').innerHTML = products.map(prod => {
+    const items = grouped[prod.id] || [];
+    if (!items.length) return '';
+    return `
+      <div class="mb-12">
+        <div class="flex items-center gap-2.5 mb-4">
+          <span class="prod-dot" style="background:${colors[prod.color]}"></span>
+          <div>
+            <h3 class="font-semibold">${esc(prod.name)}</h3>
+            <p class="text-xs text-zinc-600">${esc(prod.desc)} · ${money(prod.base)}/mo</p>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${items.map(l => {
+            const { final, off } = calc(l.pct, l.product);
+            return `
+              <div class="card rounded-xl p-5">
+                <div class="flex justify-between items-start mb-2">
+                  <div class="text-3xl font-bold">${l.pct}%</div>
+                  ${off ? `<span class="discount-badge text-xs font-medium text-emerald-400">${Math.round(off*100)}% off</span>` : ''}
+                </div>
+                <div class="text-sm font-medium mb-1">${money(final)}</div>
+                <div class="text-xs text-zinc-600 mb-1">${esc(l.seller)} · ★ ${l.rating}</div>
+                <div class="text-xs text-zinc-500 mb-3">${l.left} left</div>
+                <button onclick="openModal(${l.pct}, '${l.product}')" class="btn w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-medium">Buy</button>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openModal(p, productId) {
+  if (!user) {
+    pendingBuy = { p, productId };
+    openAuth();
+    return;
+  }
+  currentProduct = productId || "super";
+  document.getElementById('productSelect').value = currentProduct;
+  if (p) setPct(p); else updatePrice();
+  goToStep(1);
+  document.getElementById('modal').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('modal').classList.add('hidden'); pendingBuy = null; }
+
+function fillPayStep() {
+  const pct = Number(document.getElementById('pct').value);
+  const { final, prod } = calc(pct);
+  document.getElementById('payEmail').textContent = user ? user.email : '—';
+  document.getElementById('payBalance').textContent = money(user ? prestige.balance : 0);
+  document.getElementById('payCost').textContent = money(final);
+  const warn = document.getElementById('payWarn');
+  const review = document.getElementById('reviewBtn');
+  if (!user) {
+    warn.textContent = 'Sign in first.';
+    warn.classList.remove('hidden');
+    review.classList.add('opacity-50', 'pointer-events-none');
+  } else if (prestige.balance < final - 1e-9) {
+    warn.textContent = 'Not enough demo balance. Your balance is ' + money(prestige.balance) + ', and this share costs ' + money(final) + '. Collect earnings, claim prestige, or pick a smaller share.';
+    warn.classList.remove('hidden');
+    review.classList.add('opacity-50', 'pointer-events-none');
+  } else {
+    warn.classList.add('hidden');
+    review.classList.remove('opacity-50', 'pointer-events-none');
+  }
+  document.getElementById('confirmPct').textContent = pct + '% ' + prod.name;
+  document.getElementById('confirmEmail').textContent = user ? user.email : '';
+  document.getElementById('confirmTotal').textContent = money(final);
+}
+
+function goToStep(n) {
+  if ((n === 2 || n === 3) && !user) { closeModal(); openAuth(); return; }
+  if ((n === 2 || n === 3)) fillPayStep();
+  if (n === 3 && user && prestige.balance < calc(Number(document.getElementById('pct').value)).final - 1e-9) {
+    n = 2;
+    fillPayStep();
+  }
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById('panel' + i).classList.toggle('hidden', i !== n);
+    const step = document.getElementById('step' + i);
+    step.classList.remove('active', 'done');
+    if (i < n) step.classList.add('done');
+    if (i === n) step.classList.add('active');
+  }
+}
+
+function setPct(p) { document.getElementById('pct').value = p; updatePrice(); }
+function updatePrice() {
+  const pct = Number(document.getElementById('pct').value);
+  document.getElementById('pctLabel').textContent = pct + '%';
+  const { base, markup, off, final } = calc(pct);
+  document.getElementById('basePrice').textContent = money(base);
+  document.getElementById('markupPrice').textContent = '+' + money(markup);
+  document.getElementById('discount').textContent = off ? `-${Math.round(off*100)}%` : '—';
+  const fp = document.getElementById('finalPrice');
+  fp.textContent = money(final);
+  fp.classList.remove('price-flash'); void fp.offsetWidth; fp.classList.add('price-flash');
+  document.querySelectorAll('.preset').forEach(b => b.classList.toggle('active', Number(b.dataset.p) === pct));
+}
+
+function processPayment() {
+  if (!user) { closeModal(); openAuth(); return; }
+  const pct = Number(document.getElementById('pct').value);
+  const { final } = calc(pct);
+  if (prestige.balance < final - 1e-9) { goToStep(2); return; }
+  document.getElementById('confirmBtns').classList.add('hidden');
+  document.getElementById('processing').classList.remove('hidden');
+  const msgs = ['Checking your demo balance...', 'Adding share...', 'Done'];
+  let i = 0;
+  const iv = setInterval(() => {
+    document.getElementById('processMsg').textContent = msgs[i] || msgs[msgs.length - 1];
+    i++; if (i >= msgs.length) { clearInterval(iv); setTimeout(finishPayment, 300); }
+  }, 450);
+}
+
+function finishPayment() {
+  const pct = Number(document.getElementById('pct').value);
+  const { final, prod } = calc(pct);
+  if (!user || prestige.balance < final - 1e-9) {
+    document.getElementById('confirmBtns').classList.remove('hidden');
+    document.getElementById('processing').classList.add('hidden');
+    goToStep(2);
+    return;
+  }
+  prestige.balance -= final;
+  holdings.push({ pct, product: currentProduct, name: prod.name, cost: final });
+  orderNum++;
+  activity.unshift({ type: 'buy', pct, product: prod.name, price: final, email: user.email, order: 'GS-' + orderNum });
+  document.getElementById('bought').textContent = pct;
+  document.getElementById('boughtProduct').textContent = prod.name;
+  document.getElementById('orderId').textContent = 'GS-' + orderNum;
+  document.getElementById('shareCount').textContent = (1284 + holdings.length).toLocaleString();
+  save();
+  closeModal();
+  document.getElementById('success').classList.remove('hidden');
+  renderHoldings(); renderActivity(); renderEarnings(); renderPrestige(); updateNavBalance();
+  document.getElementById('confirmBtns').classList.remove('hidden');
+  document.getElementById('processing').classList.add('hidden');
+}
+
+function closeSuccess() { document.getElementById('success').classList.add('hidden'); }
+
+function sellHolding(index) {
+  if (!user) return;
+  const h = holdings[index];
+  if (!h) return;
+  const { final } = calc(h.pct, h.product);
+  prestige.balance += final;
+  holdings.splice(index, 1);
+  orderNum++;
+  activity.unshift({ type: 'sell', pct: h.pct, product: h.name, price: final, email: user.email, order: 'SL-' + orderNum });
+  save();
+  renderHoldings();
+  renderActivity();
+  renderEarnings();
+  renderPrestige();
+  updateNavBalance();
+  document.getElementById('shareCount').textContent = (1284 + holdings.length).toLocaleString();
+}
+
+function renderHoldings() {
+  const el = document.getElementById('holdingsList');
+  if (!holdings.length) { el.innerHTML = '<div class="card rounded-2xl p-10 text-center text-zinc-600 text-sm">No shares yet.</div>'; return; }
+  const total = holdings.reduce((s, h) => s + calc(h.pct, h.product).final, 0);
+  const cost = holdings.reduce((s, h) => s + (h.cost || calc(h.pct, h.product).final), 0);
+  const pnl = total - cost;
+  const pnlCls = pnl >= 0 ? 'text-emerald-400' : 'text-red-400';
+  el.innerHTML = `
+    <div class="card rounded-xl p-4 mb-3 flex justify-between items-center">
+      <div>
+        <div class="text-sm text-zinc-500">Portfolio</div>
+        <div class="text-xs text-zinc-600 mt-0.5">Paid ${money(cost)}</div>
+      </div>
+      <div class="text-right">
+        <div class="text-xl font-bold">${money(total)}</div>
+        <div class="text-xs ${pnlCls}">${pnl >= 0 ? '+' : ''}${money(pnl)}</div>
+      </div>
+    </div>
+    ${holdings.map((h, i) => {
+      const { final } = calc(h.pct, h.product);
+      const hCost = h.cost || final;
+      const hPnl = final - hCost;
+      const cls = hPnl >= 0 ? 'text-emerald-400' : 'text-red-400';
+      return `<div class="card rounded-xl p-4 flex justify-between items-center mb-2">
+        <div>
+          <div class="font-medium">${h.pct}% ${esc(h.name)}</div>
+          <div class="text-xs text-zinc-600">Value ${money(final)} · paid ${money(hCost)}</div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs ${cls} mb-2">${hPnl >= 0 ? '+' : ''}${money(hPnl)}</div>
+          <button onclick="sellHolding(${i})" class="btn text-xs border border-zinc-800 hover:border-zinc-500 px-3 py-1.5 rounded-lg">Sell</button>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function activityTitle(a) {
+  if (a.type === 'sell') return 'Sold ' + a.pct + '% ' + a.product;
+  if (a.type === 'earn') return a.product;
+  if (a.type === 'claim') return 'Prestige claim';
+  if (a.type === 'redeem') return 'Cash out to PayPal (demo)';
+  if (a.pct) return a.pct + '% ' + a.product;
+  return a.product || 'Activity';
+}
+
+function renderActivity() {
+  const el = document.getElementById('activityList');
+  if (!activity.length) { el.innerHTML = '<div class="card rounded-xl p-6 text-center text-zinc-600 text-sm">No activity yet.</div>'; return; }
+  el.innerHTML = activity.slice(0, 20).map(a => {
+    const status = a.type === 'redeem'
+      ? (a.status === 'pending' ? '<span class="text-amber-400">Pending (demo)</span>' : '<span class="text-emerald-400">Completed (demo)</span>')
+      : '';
+    const note = a.note ? '<div class="text-[11px] text-zinc-700">' + esc(a.note) + '</div>' : '';
+    return `
+    <div class="card rounded-lg p-3.5 flex justify-between items-center text-sm mb-2">
+      <div>
+        <div class="font-medium">${esc(activityTitle(a))}</div>
+        <div class="text-xs text-zinc-600">${esc(a.order || '')}${status ? ' · ' + status : ''}</div>
+        ${note}
+      </div>
+      <div class="font-medium">${money(a.price)}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleHelp(force) {
+  const panel = document.getElementById('helpPanel');
+  const open = typeof force === 'boolean' ? force : !panel.classList.contains('open');
+  panel.classList.toggle('open', open);
+  if (open) {
+    if (!chat.length) seedHelp();
+    renderHelp();
+    setTimeout(() => document.getElementById('helpInput').focus(), 50);
+  }
+}
+
+function seedHelp() {
+  chat.push({ role: 'bot', text: "Hi — I'm GrokShare Helper, a demo helper on this page. I don't use a server. Ask me about your balance, shares, earnings, levels, or how cash out works." });
+}
+
+function renderHelp() {
+  const box = document.getElementById('helpMessages');
+  const chips = document.getElementById('helpChips');
+  if (!chat.length) seedHelp();
+  box.innerHTML = chat.map(m =>
+    `<div class="help-msg ${m.role === 'user' ? 'user' : 'bot'}">${esc(m.text)}</div>`
+  ).join('');
+  chips.innerHTML = HELP_CHIPS.map(c =>
+    `<button type="button" class="help-chip" data-q="${esc(c)}">${esc(c)}</button>`
+  ).join('');
+  chips.querySelectorAll('.help-chip').forEach(btn => {
+    btn.addEventListener('click', () => askHelp(btn.getAttribute('data-q')));
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendHelp(ev) {
+  ev.preventDefault();
+  const input = document.getElementById('helpInput');
+  const text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  askHelp(text);
+}
+
+function askHelp(text) {
+  chat.push({ role: 'user', text: String(text) });
+  chat.push({ role: 'bot', text: helperReply(String(text)) });
+  if (chat.length > 80) chat = chat.slice(-80);
+  if (user) save();
+  renderHelp();
+}
+
+function ownedPct(id) {
+  return holdings.filter(h => h.product === id).reduce((s, h) => s + h.pct, 0);
+}
+
+function helperReply(text) {
+  const q = text.toLowerCase();
+  const signed = !!user;
+  const bal = signed ? prestige.balance : null;
+  const earn = signed ? earningsUsd() : null;
+  const avail = signed ? availableCash() : null;
+  const left = signed ? claimMsLeft() : null;
+  const tier = signed ? getTier() : null;
+
+  const productAsk = products.find(p => q.includes(p.id) || q.includes(p.name.toLowerCase()) || (p.id === 'bot' && q.includes('agent')));
+  if (productAsk && (q.includes('earn') || q.includes('how') || q.includes('what') || q.includes('mine') || q.includes('bounty') || q.includes('fee') || q.includes('revenue') || q.includes('yield') || q.includes('sale') || q.includes('btc'))) {
+    const m = earnMeta[productAsk.id];
+    const pct = signed ? ownedPct(productAsk.id) : 0;
+    const extra = signed
+      ? (pct > 0 ? ' You own ' + pct + '% of ' + productAsk.name + ', so this stream is running for you.' : ' You do not own any ' + productAsk.name + ' yet, so this stream is not earning.')
+      : ' Sign in to see how much of this you own.';
+    return productAsk.name + ' earns "' + m.label + '". The more percent you own, the faster it grows. ' + (m.unit === 'btc' ? 'This one is shown in BTC, then turned into fake dollars.' : 'This one is tracked in fake dollars.') + extra + ' Open Earnings to watch it. This is all simulated.';
+  }
+
+  if (/(cash out|redeem|paypal|withdraw|payout|cashout)/.test(q) || (q.includes('min') && (q.includes('cash') || q.includes('out') || q.includes('25')))) {
+    const live = signed
+      ? ' You have ' + money(avail) + ' available (' + money(bal) + ' in your wallet and ' + money(earn) + ' uncollected). ' + (avail >= MIN_REDEEM ? 'You can try a simulated cash out now.' : 'You still need ' + money(MIN_REDEEM - avail) + ' more to reach the ' + money(MIN_REDEEM) + ' minimum.')
+      : ' Sign in to see your total.';
+    return 'Cash out to PayPal is only a demo. It needs at least ' + money(MIN_REDEEM) + '. You type a fake PayPal email, confirm, and get a fake transaction ID. Status goes from Pending to Completed in a few seconds. Nothing is sent, and no real PayPal account is used.' + live;
+  }
+
+  if (/(balance|how much|wallet|money do i|my money)/.test(q)) {
+    if (!signed) return 'Sign in with your email to see your demo balance. New people start with ' + money(START_BALANCE) + ' in fake money. No password is asked for.';
+    return 'Your demo wallet is ' + money(bal) + '. Uncollected earnings are ' + money(earn) + '. Together you have ' + money(avail) + ' available. This is fake money on this device only.';
+  }
+
+  if (/(holding|portfolio|what do i own|my share|shares i|inventory)/.test(q)) {
+    if (!signed) return 'Sign in first, then buy a share from the Marketplace. Your holdings will show up in the Holdings section.';
+    if (!holdings.length) return 'You do not own any shares yet. Your wallet is ' + money(bal) + '. Open Marketplace and buy a small slice to start earning.';
+    const lines = holdings.map(h => h.pct + '% ' + h.name + ' (worth ' + money(calc(h.pct, h.product).final) + ')');
+    const total = holdings.reduce((s, h) => s + calc(h.pct, h.product).final, 0);
+    return 'You own: ' + lines.join('; ') + '. Portfolio value is ' + money(total) + '. You can sell a share from the Holdings section. The money goes back to your demo wallet.';
+  }
+
+  if (/(cooldown|claim|wait|when can i claim|prestige claim)/.test(q)) {
+    if (!signed) return 'After you sign in, you can claim prestige credits about every 8 seconds. Higher levels pay more. Sign in to see your timer.';
+    if (left <= 0) return 'Your prestige claim is ready now. You are level ' + prestige.level + ' (' + tier.name + ') and can claim about ' + money(tier.earn) + ' or a little more. After you claim, there is an 8 second wait.';
+    return 'Next prestige claim is in ' + Math.ceil(left / 1000) + ' seconds. You are level ' + prestige.level + ' (' + tier.name + '). Claims add fake money to your wallet.';
+  }
+
+  if (/(each product|how does each|all product|earn stream|how .* earn|dividends|bounties|mining|agent fees|app revenue|content sales|alpha yield)/.test(q) || (q.includes('earn') && !q.includes('year'))) {
+    const live = signed && holdings.length
+      ? ' Right now uncollected earnings are ' + money(earn) + '. You can collect them to your wallet, where each stream is named in Activity.'
+      : ' Buy a share to start a stream. Bigger percents earn faster.';
+    return 'Each product earns in its own way, based on the percent you own: Super mines BTC; Cursor pays Code Bounties; Bot pays Agent Fees; Builder pays App Revenue; Imagine pays Content Sales; Ultra pays Alpha Yield. You can also claim prestige credits on a short cooldown.' + live + ' All of this is fake.';
+  }
+
+  if (/\bsell\b/.test(q)) {
+    return 'To sell, go to Holdings and press Sell on a share. The current listed value goes back to your demo wallet, and the sale shows up in Activity. You must be signed in. This is not a real sale.';
+  }
+
+  if (/(buy|purchase|checkout|how do i get)/.test(q)) {
+    if (!signed) return 'Press Sign in and enter an email only — no password and no card. New accounts start with ' + money(START_BALANCE) + '. Then open Marketplace, pick a share, and pay with your demo balance.';
+    return 'Open Marketplace, pick a product and a percent, then pay with your demo balance. Your wallet is ' + money(bal) + '. No card or payment details are collected. Bigger percents can get a bulk discount. After you buy, that share starts earning in its own way.';
+  }
+
+  if (/(level|prestige|xp|rank|achievement)/.test(q)) {
+    if (!signed) return 'Prestige has 5 levels: Starter, Active, Trusted, Elite, and Legendary. Claiming credits gives XP and raises your level. Higher levels pay more on each claim. Sign in to see yours.';
+    const next = prestigeTiers.find(t => t.level === prestige.level + 1);
+    return 'You are level ' + prestige.level + ' (' + tier.name + ') with ' + prestige.xp + ' XP. ' + (next ? 'You need ' + (prestige.level * 200) + ' XP to reach ' + next.name + '.' : 'You are at the max level.') + ' Your wallet is ' + money(bal) + '.';
+  }
+
+  if (/(real|fake|demo|scam|legit|password|card|credit|safe)/.test(q)) {
+    return 'This whole site is a demo. The money is fake. Sign-in is email only — we never ask for a password or card. Cash out to PayPal is simulated and sends nothing. Progress is saved only in this browser, under your email.';
+  }
+
+  if (/(hello|hi\b|hey|help|start|what can you|who are you)/.test(q)) {
+    return "I'm GrokShare Helper, a demo helper built into this page. I can tell you your balance, holdings, claim wait time, how each product earns, how to buy or sell, and how the fake PayPal cash out works (minimum " + money(MIN_REDEEM) + "). What do you want to know?";
+  }
+
+  if (!signed) {
+    return "I'm not sure I caught that. Try a quick button below, or sign in with your email so I can use your live demo numbers. I can explain buying, selling, earnings, levels, and the simulated PayPal cash out.";
+  }
+  return "I'm not sure I caught that. You have " + money(bal) + " in your wallet, " + holdings.length + " holding" + (holdings.length === 1 ? '' : 's') + ", and you are level " + prestige.level + ". Try a quick button, or ask about earnings, buying, selling, or cash out.";
+}
+
+renderListings();
+updatePrice();
+renderPrestige();
+renderEarnings();
+renderHelp();
+setInterval(() => {
+  tickEarnings();
+  if (user && claimMsLeft() > 0) renderPrestige();
+}, 1000);
+
+const lastEmail = localStorage.getItem('grokshare_last');
+if (lastEmail && load(lastEmail)) { applyUser(); }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeAuth(); closeModal(); closePaypal(); closeSuccess(); toggleHelp(false);
+  }
+});
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function (err) {
+      console.warn('Service worker registration failed', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
