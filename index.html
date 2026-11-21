@@ -1347,13 +1347,14 @@ function withdrawalsFromActivity(list) {
       try { date = new Date(a.completeAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }); }
       catch (e) { date = new Date(a.completeAt).toLocaleString(); }
     }
-    out.push({
+    const row = {
       amount: a.price,
       paypal_email: a.email || '',
       txn_id: a.order,
-      date: date,
-      balance_after: a.balance_after
-    });
+      date: date
+    };
+    if (a.balance_after !== undefined) row.balance_after = a.balance_after;
+    out.push(row);
   });
   return out;
 }
@@ -1679,7 +1680,11 @@ function maybeResumeBuy() {
   openModal(pb.p, pb.productId);
 }
 
-function signOut() {
+async function signOut() {
+  if (cloudSaveTimer) { clearTimeout(cloudSaveTimer); cloudSaveTimer = null; }
+  if (firebaseUser && firebaseUsable() && user) {
+    try { await pushCloudSave(); } catch (e) { console.warn('Cloud save failed', e); }
+  }
   localStorage.removeItem('grokshare_last');
   user = null;
   holdings = [];
@@ -1692,7 +1697,7 @@ function signOut() {
   withdrawals = [];
   firebaseUser = null;
   if (typeof firebase !== 'undefined' && firebaseUsable()) {
-    try { firebase.auth().signOut(); } catch (e) {}
+    try { await firebase.auth().signOut(); } catch (e) {}
   }
   const btn = document.getElementById('signInBtn');
   btn.textContent = 'Sign in';
@@ -2906,6 +2911,7 @@ function initFirebase() {
   if (!firebaseUsable()) return false;
   try {
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    try { firebase.firestore().settings({ ignoreUndefinedProperties: true }); } catch (e) {}
     firebase.auth().onAuthStateChanged(function (fbUser) {
       if (fbUser) completeFirebaseSignIn(fbUser);
       else if (!sessionStarted && !handlingEmailLink) startLocalSession();
@@ -2933,13 +2939,30 @@ function scheduleCloudSave() {
   if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
   cloudSaveTimer = setTimeout(pushCloudSave, 1500);
 }
+function sanitizeForFirestore(value) {
+  return JSON.parse(JSON.stringify(value, function (key, val) {
+    if (typeof val === 'number' && !isFinite(val)) return null;
+    return val;
+  }));
+}
 async function pushCloudSave() {
-  if (!firebaseUser || !firebaseUsable() || !user) return;
+  if (cloudSaveTimer) { clearTimeout(cloudSaveTimer); cloudSaveTimer = null; }
+  if (!firebaseUser || !firebaseUsable() || !user) return false;
   try {
-    const payload = collectState();
-    payload.user = { email: user.email, name: user.name, uid: firebaseUser.uid, provider: user.provider || 'email' };
+    const payload = sanitizeForFirestore(collectState());
+    if (!payload || typeof payload !== 'object') throw new Error('Could not build a save payload.');
+    payload.user = {
+      email: user.email || '',
+      name: user.name || '',
+      uid: firebaseUser.uid,
+      provider: user.provider || 'email'
+    };
     await firebase.firestore().collection('users').doc(firebaseUser.uid).set(payload, { merge: true });
-  } catch (e) {}
+    return true;
+  } catch (e) {
+    console.warn('Cloud save failed', e);
+    return false;
+  }
 }
 async function pullCloudSave(uid) {
   const snap = await firebase.firestore().collection('users').doc(uid).get();
@@ -2982,7 +3005,12 @@ async function completeFirebaseSignIn(fbUser) {
     if (raw) local = JSON.parse(raw);
   } catch (e) {}
   let cloud = null;
-  try { cloud = await pullCloudSave(fbUser.uid); } catch (e) {}
+  let cloudReadFailed = false;
+  try { cloud = await pullCloudSave(fbUser.uid); }
+  catch (e) {
+    cloudReadFailed = true;
+    console.warn('Cloud load failed', e);
+  }
   const localTs = (local && Number(local.updatedAt)) || 0;
   const cloudTs = (cloud && Number(cloud.updatedAt)) || 0;
   const localW = (local && local.withdrawals) || [];
@@ -2991,7 +3019,19 @@ async function completeFirebaseSignIn(fbUser) {
   const cloudAct = (cloud && cloud.activity) || [];
   if (cloud && cloudTs >= localTs) applyState(cloud);
   else if (local) applyState(local);
-  else {
+  else if (cloud) applyState(cloud);
+  else if (cloudReadFailed) {
+    user = {
+      email: email,
+      name: name,
+      uid: fbUser.uid,
+      provider: firebaseProviderId(fbUser)
+    };
+    closeAuth();
+    applyUser();
+    maybeResumeBuy();
+    return;
+  } else {
     user = null;
     holdings = [];
     activity = [];

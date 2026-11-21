@@ -1,4 +1,4 @@
-const CACHE_NAME = 'grokshare-v2';
+const CACHE_NAME = 'grokshare-v3';
 const APP_SHELL = [
   './',
   './index.html',
