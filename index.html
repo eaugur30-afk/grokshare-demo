@@ -181,6 +181,16 @@
   </div>
 </section>
 
+<section id="cashouts" class="py-20 px-6 border-t border-zinc-900">
+  <div class="max-w-2xl mx-auto">
+    <h2 class="text-2xl font-bold mb-2">Cash-out history</h2>
+    <p class="text-zinc-600 text-sm mb-6">Every PayPal cash-out is listed here, including the total you have withdrawn.</p>
+    <div id="withdrawalsPanel">
+      <div class="card rounded-2xl p-8 text-center text-zinc-600 text-sm">Sign in to see your cash-out history.</div>
+    </div>
+  </div>
+</section>
+
 <section id="spend" class="py-20 px-6 border-t border-zinc-900">
   <div class="max-w-3xl mx-auto">
     <h2 class="text-2xl font-bold mb-2">Spend</h2>
@@ -239,7 +249,7 @@
       <div class="space-y-3">
         <div>
           <label class="text-xs text-zinc-600 uppercase tracking-wider">Email</label>
-          <input id="authEmail" type="email" placeholder="you@email.com" class="input w-full mt-1 px-3.5 py-2.5 rounded-lg text-sm" value="demo@grokshare.io">
+          <input id="authEmail" type="email" placeholder="you@email.com" class="input w-full mt-1 px-3.5 py-2.5 rounded-lg text-sm">
         </div>
         <div>
           <label class="text-xs text-zinc-600 uppercase tracking-wider">Display name <span class="normal-case tracking-normal">(optional)</span></label>
@@ -251,9 +261,9 @@
       <p id="authError" class="hidden text-xs text-red-400 mt-3"></p>
       <button id="authContinueBtn" onclick="doSignIn()" class="btn w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-semibold mt-5">Continue</button>
       <button type="button" id="googleSignInBtn" onclick="signInWithGoogle()" class="hidden btn w-full border border-zinc-700 hover:border-zinc-500 py-3 rounded-lg text-sm font-semibold mt-2">Continue with Google</button>
-      <p id="googleSignInNote" class="hidden text-[11px] text-zinc-600 text-center mt-2">Google sign-in needs a hosted site and Firebase setup.</p>
+      <p id="googleSignInNote" class="hidden text-[11px] text-zinc-600 text-center mt-2">Cloud sign-in and save work on the website link, not from a local file.</p>
       <button type="button" id="authReverifyLink" onclick="startSignInAgain()" class="hidden btn w-full text-sm text-zinc-400 hover:text-white py-2 mt-2">Sign in again with a new code</button>
-      <p class="text-[11px] text-zinc-700 text-center mt-3">Email only — no password. Progress is saved on this device. Switching emails loads that email's own save.</p>
+      <p id="authEmailFoot" class="text-[11px] text-zinc-700 text-center mt-3">Email only — no password. Progress is saved on this device. Switching emails loads that email's own save.</p>
     </div>
 
     <div id="authStepCode" class="hidden">
@@ -273,6 +283,23 @@
       <button id="authVerifyBtn" onclick="verifyAuthCode()" class="btn w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-semibold mt-5">Verify</button>
       <button type="button" id="authResendBtn" onclick="resendAuthCode()" class="btn w-full border border-zinc-800 py-2.5 rounded-lg text-sm mt-2">Resend code</button>
       <button type="button" onclick="backToAuthEmail()" class="btn w-full text-sm text-zinc-400 hover:text-white py-2 mt-1">Use a different email</button>
+    </div>
+
+    <div id="authStepLinkSent" class="hidden">
+      <p class="text-sm text-zinc-300 mb-1">Check your email</p>
+      <p class="text-xs text-zinc-500 mb-4">We sent a sign-in link to <span id="authLinkEmail" class="text-zinc-300"></span>. Open that email to finish signing in. If you open the link on another computer, you will be asked for this same email.</p>
+      <p id="authLinkError" class="hidden text-xs text-red-400 mt-3"></p>
+      <button type="button" id="authResendLinkBtn" onclick="resendFirebaseEmailLink()" class="btn w-full border border-zinc-800 py-2.5 rounded-lg text-sm mt-2">Resend link</button>
+      <button type="button" onclick="backToAuthEmail()" class="btn w-full text-sm text-zinc-400 hover:text-white py-2 mt-1">Use a different email</button>
+    </div>
+
+    <div id="authStepFinishLink" class="hidden">
+      <p class="text-sm text-zinc-300 mb-1">Finish signing in</p>
+      <p class="text-xs text-zinc-500 mb-4">Enter the email you used for the sign-in link.</p>
+      <label class="text-xs text-zinc-600 uppercase tracking-wider">Email</label>
+      <input id="authLinkFinishEmail" type="email" placeholder="you@email.com" class="input w-full mt-1 px-3.5 py-2.5 rounded-lg text-sm">
+      <p id="authLinkFinishError" class="hidden text-xs text-red-400 mt-3"></p>
+      <button type="button" id="authLinkFinishBtn" onclick="submitEmailLinkEmail()" class="btn w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-semibold mt-5">Continue</button>
     </div>
   </div>
 </div>
@@ -378,7 +405,7 @@
     <div id="panel3" class="hidden">
       <div class="bg-zinc-900/60 rounded-xl p-4 space-y-2 text-sm mb-4">
         <div class="flex justify-between"><span class="text-zinc-500">Share</span><span id="confirmPct" class="font-medium">10%</span></div>
-        <div class="flex justify-between"><span class="text-zinc-500">Email</span><span id="confirmEmail" class="font-mono text-xs">demo@grokshare.io</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">Email</span><span id="confirmEmail" class="font-mono text-xs"></span></div>
         <div class="flex justify-between"><span class="text-zinc-500">Pay with</span><span class="text-xs">Balance</span></div>
         <div class="border-t border-zinc-800 pt-2 flex justify-between items-center">
           <span>Total</span><span id="confirmTotal" class="text-lg font-bold">$11.25</span>
@@ -455,19 +482,22 @@ const EMAILJS_PUBLIC_KEY = 'DB-CS6KmTEaYfETwK';
 const EMAILJS_SERVICE_ID = 'service_spoyviu';
 const TEMPLATE_CODE_ID = 'template_dzobby8';
 const TEMPLATE_RECEIPT_ID = 'template_wj7t21m';
-const RECAPTCHA_SITE_KEY = '6Ldg-youAAAAAP---Se-XhErFwKEn3ddJGI8Xxd5';
+const RECAPTCHA_SITE_KEY = '6LdOAisuAAAAAGR4g1Iw6f5Lp551LiF0tc0t60q2';
 
-// Firebase (Auth + Firestore). Replace these after you follow firebase-setup.md.
-// Leave as YOUR_... to keep email + localStorage only. Google sign-in stays
-// hidden on file:// pages and when this config is still a placeholder.
+// Firebase (Auth + Firestore). Cloud sign-in and save run on the hosted site
+// only. They stay hidden on file:// pages.
 const FIREBASE_CONFIG = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_AUTH_DOMAIN',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_STORAGE_BUCKET',
-  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-  appId: 'YOUR_APP_ID'
+  apiKey: 'AIzaSyA4xxM8CLJBijKa_c2xW1PiAlE5lpjbHw0',
+  authDomain: 'grokemail-33187.firebaseapp.com',
+  projectId: 'grokemail-33187',
+  storageBucket: 'grokemail-33187.firebasestorage.app',
+  messagingSenderId: '236650053890',
+  appId: '1:236650053890:web:68757ba6f1517bd5b5821b',
+  measurementId: 'G-W7P8YSRJ22'
 };
+const EMAIL_FOR_SIGNIN_KEY = 'emailForSignIn';
+const ACTIVITY_KEEP = 80;
+const CHAT_KEEP = 40;
 
 const MARKUP = 0.25;
 const DISCOUNTS = [{ min: 20, off: 0.15 }, { min: 10, off: 0.10 }, { min: 5, off: 0.05 }];
@@ -538,9 +568,13 @@ let pendingBuy = null;
 let redeemTimers = [];
 let stakes = { super: 0, bot: 0, cursor: 0, builder: 0, imagine: 0, ultra: 0 };
 let incomeUpgrades = 0;
+let withdrawals = [];
 let firebaseUser = null;
 let cloudSaveTimer = null;
 let sessionStarted = false;
+let handlingEmailLink = false;
+let pendingFirebaseLink = null;
+let pendingEmailLinkHref = '';
 
 const PRICE_TICK_MS = 5000;
 const PRICE_HISTORY_MAX = 200;
@@ -1137,11 +1171,36 @@ function setAuthSending(isSending, label) {
   btn.classList.toggle('pointer-events-none', !!isSending);
   btn.textContent = label || (isSending ? 'Sending code...' : 'Continue');
 }
+function hideAuthSteps() {
+  ['authStepEmail', 'authStepCode', 'authStepLinkSent', 'authStepFinishLink'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+}
 function showAuthEmailStep() {
   document.getElementById('authTitle').textContent = 'Sign in';
+  hideAuthSteps();
   document.getElementById('authStepEmail').classList.remove('hidden');
-  document.getElementById('authStepCode').classList.add('hidden');
   updateAuthSetupNotice();
+}
+function showAuthLinkSentStep() {
+  const email = pendingFirebaseLink && pendingFirebaseLink.email ? pendingFirebaseLink.email : '';
+  document.getElementById('authTitle').textContent = 'Check your email';
+  hideAuthSteps();
+  const step = document.getElementById('authStepLinkSent');
+  if (step) step.classList.remove('hidden');
+  const el = document.getElementById('authLinkEmail');
+  if (el) el.textContent = email;
+  showAuthError('authLinkError', '');
+}
+function showAuthFinishLinkStep() {
+  document.getElementById('authTitle').textContent = 'Finish signing in';
+  hideAuthSteps();
+  const step = document.getElementById('authStepFinishLink');
+  if (step) step.classList.remove('hidden');
+  showAuthError('authLinkFinishError', '');
+  const input = document.getElementById('authLinkFinishEmail');
+  if (input) setTimeout(function () { input.focus(); }, 50);
 }
 function updateAuthCodeStepUi() {
   const sent = !!(pendingVerify && pendingVerify.code);
@@ -1195,13 +1254,26 @@ function showAuthCodeStep() {
 function updateAuthSetupNotice() {
   const notice = document.getElementById('authSetupNotice');
   const reverify = document.getElementById('authReverifyLink');
-  if (emailCodesReady()) {
-    notice.classList.add('hidden');
-    reverify.classList.remove('hidden');
+  const foot = document.getElementById('authEmailFoot');
+  const btn = document.getElementById('authContinueBtn');
+  if (firebaseUsable()) {
+    if (notice) notice.classList.add('hidden');
+    if (reverify) reverify.classList.add('hidden');
+    if (foot) foot.textContent = 'We will email you a sign-in link. No password. The same email loads the same progress on any computer.';
+    if (btn && !btn.disabled) btn.textContent = 'Email me a sign-in link';
+  } else if (emailCodesReady()) {
+    if (notice) notice.classList.add('hidden');
+    if (reverify) reverify.classList.remove('hidden');
+    if (foot) foot.textContent = "Email only — no password. Progress is saved on this device. Switching emails loads that email's own save.";
+    if (btn && !btn.disabled) btn.textContent = 'Continue';
   } else {
-    notice.textContent = 'Email codes not set up yet';
-    notice.classList.remove('hidden');
-    reverify.classList.add('hidden');
+    if (notice) {
+      notice.textContent = 'Email codes not set up yet';
+      notice.classList.remove('hidden');
+    }
+    if (reverify) reverify.classList.add('hidden');
+    if (foot) foot.textContent = "Email only — no password. Progress is saved on this device. Switching emails loads that email's own save.";
+    if (btn && !btn.disabled) btn.textContent = 'Continue';
   }
   syncEmailFileNotes();
 }
@@ -1227,6 +1299,7 @@ function startResendCooldown() {
   resendTimer = setInterval(tick, 250);
 }
 function backToAuthEmail() {
+  pendingFirebaseLink = null;
   showAuthEmailStep();
   setTimeout(() => document.getElementById('authEmail').focus(), 50);
 }
@@ -1235,20 +1308,91 @@ function openAuth() {
   document.getElementById('authError').classList.add('hidden');
   showAuthError('authError', '');
   setAuthSending(false);
-  if (pendingVerify && pendingVerify.expiresAt > Date.now()) {
+  if (handlingEmailLink && pendingEmailLinkHref) {
+    showAuthFinishLinkStep();
+  } else if (pendingFirebaseLink && pendingFirebaseLink.email) {
+    showAuthLinkSentStep();
+  } else if (pendingVerify && pendingVerify.expiresAt > Date.now()) {
     showAuthCodeStep();
     startResendCooldown();
   } else {
     showAuthEmailStep();
   }
   document.getElementById('authModal').classList.remove('hidden');
-  if (document.getElementById('authStepCode').classList.contains('hidden')) {
+  const emailStep = document.getElementById('authStepEmail');
+  if (emailStep && !emailStep.classList.contains('hidden')) {
     setTimeout(() => document.getElementById('authEmail').focus(), 50);
   }
 }
 function closeAuth() { document.getElementById('authModal').classList.add('hidden'); }
 
+function normalizeWithdrawal(w) {
+  if (!w || typeof w !== 'object') return null;
+  const txn = String(w.txn_id || '').trim();
+  if (!txn) return null;
+  return {
+    amount: w.amount,
+    paypal_email: String(w.paypal_email || '').trim(),
+    txn_id: txn,
+    date: w.date || '',
+    balance_after: w.balance_after
+  };
+}
+function withdrawalsFromActivity(list) {
+  const out = [];
+  (list || []).forEach((a) => {
+    if (!a || a.type !== 'redeem' || !a.order) return;
+    let date = '';
+    if (a.completeAt) {
+      try { date = new Date(a.completeAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }); }
+      catch (e) { date = new Date(a.completeAt).toLocaleString(); }
+    }
+    out.push({
+      amount: a.price,
+      paypal_email: a.email || '',
+      txn_id: a.order,
+      date: date,
+      balance_after: a.balance_after
+    });
+  });
+  return out;
+}
+function unionWithdrawals() {
+  const map = {};
+  const list = [];
+  for (let i = 0; i < arguments.length; i++) {
+    const items = arguments[i] || [];
+    for (let j = 0; j < items.length; j++) {
+      const w = normalizeWithdrawal(items[j]);
+      if (!w || map[w.txn_id]) continue;
+      map[w.txn_id] = true;
+      list.push(w);
+    }
+  }
+  list.sort((a, b) => {
+    const ta = Date.parse(a.date) || 0;
+    const tb = Date.parse(b.date) || 0;
+    return tb - ta;
+  });
+  return list;
+}
+function withdrawalAmountValue(w) {
+  if (!w) return 0;
+  if (typeof w.amount === 'number' && isFinite(w.amount)) return w.amount;
+  const n = parseMoney(String(w.amount || ''));
+  return isFinite(n) ? n : 0;
+}
+function totalWithdrawn() {
+  return (withdrawals || []).reduce((s, w) => s + withdrawalAmountValue(w), 0);
+}
+function slimList(list, keep) {
+  if (!Array.isArray(list)) return [];
+  return list.length > keep ? list.slice(0, keep) : list;
+}
 function collectState() {
+  activity = slimList(activity, ACTIVITY_KEEP);
+  chat = slimList(chat, CHAT_KEEP);
+  withdrawals = unionWithdrawals(withdrawals, withdrawalsFromActivity(activity));
   return {
     user,
     holdings,
@@ -1259,6 +1403,7 @@ function collectState() {
     chat,
     stakes,
     incomeUpgrades,
+    withdrawals,
     updatedAt: Date.now()
   };
 }
@@ -1268,17 +1413,18 @@ function applyState(data) {
   user = data.user || null;
   if (user && user.email) user.email = String(user.email).toLowerCase().trim();
   holdings = data.holdings || [];
-  activity = data.activity || [];
+  activity = slimList(data.activity || [], ACTIVITY_KEEP);
   orderNum = data.orderNum || 1847;
   prestige = data.prestige || { level: 1, xp: 0, balance: 0, nextClaim: 0 };
   if (typeof prestige.balance !== 'number' || !isFinite(prestige.balance)) prestige.balance = 0;
   if (typeof prestige.level !== 'number' || prestige.level < 1) prestige.level = 1;
   if (typeof prestige.xp !== 'number' || !isFinite(prestige.xp)) prestige.xp = 0;
   earnings = Object.assign(defaultEarnings(), data.earnings || {});
-  chat = Array.isArray(data.chat) ? data.chat : [];
+  chat = slimList(Array.isArray(data.chat) ? data.chat : [], CHAT_KEEP);
   stakes = Object.assign(defaultStakes(), data.stakes || {});
   incomeUpgrades = Number(data.incomeUpgrades) || 0;
   if (!isFinite(incomeUpgrades) || incomeUpgrades < 0) incomeUpgrades = 0;
+  withdrawals = unionWithdrawals(data.withdrawals, withdrawalsFromActivity(activity));
   return true;
 }
 
@@ -1314,6 +1460,7 @@ function applyUser() {
   renderActivity();
   renderEarnings();
   renderSpend();
+  renderWithdrawals();
   updateNavBalance();
   document.getElementById('shareCount').textContent = (1284 + holdings.length).toLocaleString();
   renderHelp();
@@ -1339,6 +1486,7 @@ function finishSignIn(email, nameInput) {
     earnings = defaultEarnings();
     stakes = defaultStakes();
     incomeUpgrades = 0;
+    withdrawals = [];
     save();
   }
   authForceReverify = false;
@@ -1362,6 +1510,10 @@ function readAuthForm() {
 async function doSignIn() {
   const form = readAuthForm();
   if (!form) return;
+  if (firebaseUsable()) {
+    await sendFirebaseEmailLink(form.email, form.nameInput, false);
+    return;
+  }
   if (!emailCodesReady()) {
     finishSignIn(form.email, form.nameInput);
     return;
@@ -1537,6 +1689,7 @@ function signOut() {
   earnings = defaultEarnings();
   stakes = defaultStakes();
   incomeUpgrades = 0;
+  withdrawals = [];
   firebaseUser = null;
   if (typeof firebase !== 'undefined' && firebaseUsable()) {
     try { firebase.auth().signOut(); } catch (e) {}
@@ -1551,6 +1704,7 @@ function signOut() {
   renderActivity();
   renderEarnings();
   renderSpend();
+  renderWithdrawals();
   renderHelp();
   document.getElementById('shareCount').textContent = '1,284';
 }
@@ -1787,10 +1941,18 @@ function confirmRedeem() {
     completeAt,
     note: ''
   });
+  withdrawals = unionWithdrawals(withdrawals, [{
+    amount: total,
+    paypal_email: email,
+    txn_id: txId,
+    date: receiptDate(),
+    balance_after: prestige.balance
+  }]);
   save();
   renderEarnings();
   renderPrestige();
   renderActivity();
+  renderWithdrawals();
   updateNavBalance();
 
   document.getElementById('paypalForm').classList.add('hidden');
@@ -1899,6 +2061,45 @@ function resolveRedemptions() {
 }
 
 function closePaypal() { document.getElementById('paypalModal').classList.add('hidden'); }
+
+function renderWithdrawals() {
+  const el = document.getElementById('withdrawalsPanel');
+  if (!el) return;
+  if (!user) {
+    el.innerHTML = '<div class="card rounded-2xl p-8 text-center text-zinc-600 text-sm">Sign in to see your cash-out history.</div>';
+    return;
+  }
+  const list = withdrawals || [];
+  if (!list.length) {
+    el.innerHTML = '<div class="card rounded-2xl p-8 text-center text-zinc-600 text-sm">No cash-outs yet.</div>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="card rounded-2xl p-6 mb-4">
+      <div class="text-xs text-zinc-500 uppercase tracking-wider">Total withdrawn</div>
+      <div class="text-2xl font-bold mt-1 tabular-nums">${money(totalWithdrawn())}</div>
+    </div>
+    <div class="space-y-2">
+      ${list.map(function (w) {
+        const after = (typeof w.balance_after === 'number' && isFinite(w.balance_after))
+          ? money(w.balance_after)
+          : (w.balance_after ? String(w.balance_after) : '');
+        return `
+        <div class="card rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+          <div>
+            <div class="text-lg font-semibold tabular-nums">${money(withdrawalAmountValue(w))}</div>
+            <div class="text-xs text-zinc-500 mt-1">${esc(w.date || '')}</div>
+            <div class="text-xs text-zinc-600 mt-1">PayPal ${esc(w.paypal_email || '')}</div>
+          </div>
+          <div class="text-xs text-zinc-500 sm:text-right">
+            <div class="font-mono">${esc(w.txn_id)}</div>
+            ${after ? ('<div class="mt-1">Balance after ' + esc(after) + '</div>') : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
 
 function renderEarnings() {
   const el = document.getElementById('earningsPanel');
@@ -2328,7 +2529,7 @@ function helperReply(text) {
   }
 
   if (/(real|fake|demo|scam|legit|password|card|credit|safe)/.test(q)) {
-    return 'Practice money only. Not real funds. Sign-in is email only — we never ask for a password or card. If email is set up, we can send a sign-in code and a cash-out receipt from GrokShare (the receipt notes that no real money was sent). Progress is saved only in this browser, under your email.';
+    return 'Sign-in uses your email — we never ask for a password or card. On the website, we email a sign-in link and save your progress in the cloud, so the same email works on any computer. We can also send a cash-out receipt. On a local file, progress stays in this browser.';
   }
 
   if (/(hello|hi\b|hey|help|start|what can you|who are you)/.test(q)) {
@@ -2349,6 +2550,8 @@ initEmailJs();
 });
 const authCodeEl = document.getElementById('authCode');
 if (authCodeEl) authCodeEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); verifyAuthCode(); } });
+const authLinkFinishEl = document.getElementById('authLinkFinishEmail');
+if (authLinkFinishEl) authLinkFinishEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitEmailLinkEmail(); } });
 
 
 function totalStaked() {
@@ -2569,15 +2772,146 @@ function setupGoogleButton() {
     note.classList.remove('hidden');
   }
 }
+function currentPageUrlWithoutQuery() {
+  return location.origin + location.pathname;
+}
+function firebaseAuthErrorText(e, fallback) {
+  let text = '';
+  if (e && e.message) text = String(e.message);
+  else if (e && e.code) text = String(e.code);
+  else if (typeof e === 'string') text = e;
+  text = text.replace(/\s+/g, ' ').trim();
+  if (text) return (fallback || 'Something went wrong.') + ' ' + text;
+  return fallback || 'Something went wrong.';
+}
+function firebaseProviderId(fbUser) {
+  const providers = (fbUser && fbUser.providerData) || [];
+  for (let i = 0; i < providers.length; i++) {
+    const id = providers[i] && providers[i].providerId;
+    if (id === 'google.com') return 'google';
+  }
+  return 'email';
+}
+async function sendFirebaseEmailLink(email, nameInput, isResend) {
+  if (!firebaseUsable()) return;
+  const errId = isResend ? 'authLinkError' : 'authError';
+  showAuthError(errId, '');
+  if (isResend && pendingFirebaseLink && pendingFirebaseLink.sentAt && Date.now() - pendingFirebaseLink.sentAt < RESEND_COOLDOWN_MS) {
+    startLinkResendCooldown();
+    return;
+  }
+  const busyId = isResend ? 'authResendLinkBtn' : 'authContinueBtn';
+  const idle = isResend ? 'Resend link' : 'Email me a sign-in link';
+  setBtnBusy(busyId, true, idle, 'Sending...');
+  try {
+    await firebase.auth().sendSignInLinkToEmail(email, {
+      url: currentPageUrlWithoutQuery(),
+      handleCodeInApp: true
+    });
+    try { localStorage.setItem(EMAIL_FOR_SIGNIN_KEY, email); } catch (e) {}
+    if (nameInput) {
+      try { localStorage.setItem('emailForSignInName', nameInput); } catch (e) {}
+    }
+    pendingFirebaseLink = { email: email, name: nameInput || '', sentAt: Date.now() };
+    setBtnBusy(busyId, false, idle);
+    setAuthSending(false, 'Email me a sign-in link');
+    showAuthLinkSentStep();
+    startLinkResendCooldown();
+  } catch (e) {
+    setBtnBusy(busyId, false, idle);
+    setAuthSending(false, 'Email me a sign-in link');
+    showAuthError(errId, firebaseAuthErrorText(e, 'Could not send the sign-in link.'));
+  }
+}
+function resendFirebaseEmailLink() {
+  if (!pendingFirebaseLink || !pendingFirebaseLink.email) {
+    backToAuthEmail();
+    return;
+  }
+  sendFirebaseEmailLink(pendingFirebaseLink.email, pendingFirebaseLink.name, true);
+}
+function startLinkResendCooldown() {
+  if (resendTimer) clearInterval(resendTimer);
+  const btn = document.getElementById('authResendLinkBtn');
+  const tick = function () {
+    const sentAt = pendingFirebaseLink && pendingFirebaseLink.sentAt ? pendingFirebaseLink.sentAt : 0;
+    const left = Math.max(0, RESEND_COOLDOWN_MS - (Date.now() - sentAt));
+    if (!btn) return;
+    if (left > 0) {
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'pointer-events-none');
+      btn.textContent = 'Resend link in ' + Math.ceil(left / 1000) + 's';
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('opacity-50', 'pointer-events-none');
+      btn.textContent = 'Resend link';
+      if (resendTimer) { clearInterval(resendTimer); resendTimer = null; }
+    }
+  };
+  tick();
+  resendTimer = setInterval(tick, 250);
+}
+async function maybeCompleteEmailLinkSignIn() {
+  if (!firebaseUsable()) return;
+  try {
+    if (!firebase.auth().isSignInWithEmailLink(location.href)) return;
+  } catch (e) { return; }
+  handlingEmailLink = true;
+  pendingEmailLinkHref = location.href;
+  let email = '';
+  try { email = String(localStorage.getItem(EMAIL_FOR_SIGNIN_KEY) || '').trim().toLowerCase(); } catch (e) {}
+  if (!email) {
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.remove('hidden');
+    showAuthFinishLinkStep();
+    return;
+  }
+  await finishEmailLinkSignIn(email);
+}
+async function finishEmailLinkSignIn(email) {
+  email = String(email || '').toLowerCase().trim();
+  if (!isEmail(email)) {
+    showAuthError('authLinkFinishError', 'Please enter a valid email.');
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.remove('hidden');
+    showAuthFinishLinkStep();
+    return;
+  }
+  setBtnBusy('authLinkFinishBtn', true, 'Continue', 'Signing in...');
+  try {
+    await firebase.auth().signInWithEmailLink(email, pendingEmailLinkHref || location.href);
+    try { localStorage.removeItem(EMAIL_FOR_SIGNIN_KEY); } catch (e) {}
+    try { localStorage.removeItem('emailForSignInName'); } catch (e) {}
+    pendingFirebaseLink = null;
+    handlingEmailLink = false;
+    pendingEmailLinkHref = '';
+    try { history.replaceState(null, '', location.origin + location.pathname + location.hash); } catch (e) {}
+    setBtnBusy('authLinkFinishBtn', false, 'Continue');
+  } catch (e) {
+    handlingEmailLink = false;
+    setBtnBusy('authLinkFinishBtn', false, 'Continue');
+    const finish = document.getElementById('authStepFinishLink');
+    const elId = (finish && !finish.classList.contains('hidden')) ? 'authLinkFinishError' : 'authError';
+    showAuthError(elId, firebaseAuthErrorText(e, 'Could not finish signing in.'));
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.remove('hidden');
+  }
+}
+async function submitEmailLinkEmail() {
+  const input = document.getElementById('authLinkFinishEmail');
+  const email = input ? (input.value || '').toLowerCase().trim() : '';
+  await finishEmailLinkSignIn(email);
+}
 function initFirebase() {
   if (!firebaseUsable()) return false;
   try {
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     firebase.auth().onAuthStateChanged(function (fbUser) {
-      if (fbUser) completeGoogleSignIn(fbUser);
-      else if (!sessionStarted) startLocalSession();
+      if (fbUser) completeFirebaseSignIn(fbUser);
+      else if (!sessionStarted && !handlingEmailLink) startLocalSession();
     });
-    setTimeout(function () { if (!sessionStarted) startLocalSession(); }, 2500);
+    maybeCompleteEmailLinkSignIn();
+    setTimeout(function () { if (!sessionStarted && !handlingEmailLink) startLocalSession(); }, 4000);
     return true;
   } catch (e) {
     setupGoogleButton();
@@ -2589,7 +2923,7 @@ function startSavedSession() {
   startLocalSession();
 }
 function startLocalSession() {
-  if (sessionStarted) return;
+  if (sessionStarted || handlingEmailLink) return;
   sessionStarted = true;
   const lastEmail = localStorage.getItem('grokshare_last');
   if (lastEmail && load(lastEmail)) applyUser();
@@ -2603,7 +2937,7 @@ async function pushCloudSave() {
   if (!firebaseUser || !firebaseUsable() || !user) return;
   try {
     const payload = collectState();
-    payload.user = { email: user.email, name: user.name, uid: firebaseUser.uid, provider: user.provider || 'google' };
+    payload.user = { email: user.email, name: user.name, uid: firebaseUser.uid, provider: user.provider || 'email' };
     await firebase.firestore().collection('users').doc(firebaseUser.uid).set(payload, { merge: true });
   } catch (e) {}
 }
@@ -2613,7 +2947,7 @@ async function pullCloudSave(uid) {
 }
 async function signInWithGoogle() {
   if (!firebaseUsable()) {
-    showAuthError('authError', 'Google sign-in needs a hosted site and Firebase setup.');
+    showAuthError('authError', 'Google sign-in works on the website link.');
     return;
   }
   try {
@@ -2621,17 +2955,25 @@ async function signInWithGoogle() {
     provider.setCustomParameters({ prompt: 'select_account' });
     await firebase.auth().signInWithPopup(provider);
   } catch (e) {
-    showAuthError('authError', 'Google sign-in did not work. You can still use email.');
+    showAuthError('authError', firebaseAuthErrorText(e, 'Google sign-in did not work. You can still use email.'));
   }
 }
-async function completeGoogleSignIn(fbUser) {
+async function completeFirebaseSignIn(fbUser) {
   if (!fbUser) return;
+  if (firebaseUser && firebaseUser.uid === fbUser.uid && user && user.uid === fbUser.uid) {
+    firebaseUser = fbUser;
+    return;
+  }
   sessionStarted = true;
   firebaseUser = fbUser;
   const email = String(fbUser.email || '').toLowerCase().trim();
-  const name = fbUser.displayName || (email ? email.split('@')[0] : 'Player');
+  let storedName = '';
+  try { storedName = (localStorage.getItem('emailForSignInName') || '').trim(); } catch (e) {}
+  const name = fbUser.displayName || storedName || (email ? email.split('@')[0] : 'Player');
   if (!email) {
-    showAuthError('authError', 'Google sign-in did not provide an email.');
+    showAuthError('authError', 'Sign-in did not provide an email.');
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.remove('hidden');
     return;
   }
   let local = null;
@@ -2643,6 +2985,10 @@ async function completeGoogleSignIn(fbUser) {
   try { cloud = await pullCloudSave(fbUser.uid); } catch (e) {}
   const localTs = (local && Number(local.updatedAt)) || 0;
   const cloudTs = (cloud && Number(cloud.updatedAt)) || 0;
+  const localW = (local && local.withdrawals) || [];
+  const cloudW = (cloud && cloud.withdrawals) || [];
+  const localAct = (local && local.activity) || [];
+  const cloudAct = (cloud && cloud.activity) || [];
   if (cloud && cloudTs >= localTs) applyState(cloud);
   else if (local) applyState(local);
   else {
@@ -2655,16 +3001,25 @@ async function completeGoogleSignIn(fbUser) {
     earnings = defaultEarnings();
     stakes = defaultStakes();
     incomeUpgrades = 0;
+    withdrawals = [];
   }
+  withdrawals = unionWithdrawals(
+    withdrawals,
+    localW,
+    cloudW,
+    withdrawalsFromActivity(localAct),
+    withdrawalsFromActivity(cloudAct)
+  );
   user = Object.assign({}, user || {}, {
-    email,
+    email: email,
     name: (user && user.name) || name,
     uid: fbUser.uid,
-    provider: 'google'
+    provider: firebaseProviderId(fbUser)
   });
   save();
   closeAuth();
   applyUser();
+  maybeResumeBuy();
 }
 
 function hexFromBuffer(buf) {
